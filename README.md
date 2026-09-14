@@ -13,7 +13,7 @@ An AI/ML-powered network analysis component built for the SecureMailScope proble
 - **Live Dashboard**: A real-time monitoring interface that polls the API to display session summaries, security scores, and specific vulnerability recommendations.
 - **Seamless Integration**: Includes a file watcher (`watch_and_forward.py`) that instantly forwards new sessions from the packet capture tool directly to the pipeline.
 
-## 📁 Project Structure
+## 📁 Project Structure 
 
 ```text
 securemailscope/
@@ -73,11 +73,13 @@ Open your browser and navigate to the dashboard served by the API:
 http://localhost:8000/dashboard/
 ```
 
+
 ### 5. Live Data Integration
 To automatically analyze new sessions as they are captured, run the file watcher in a separate terminal:
 ```bash
 python integration/watch_and_forward.py path/to/sessions_export.csv
 ```
+
 
 ## 🛠 Manual Testing
 You can manually test the pipeline by sending a sample JSON payload:
