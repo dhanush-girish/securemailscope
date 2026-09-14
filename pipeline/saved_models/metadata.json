@@ -1,0 +1,61 @@
+{
+  "n_training_records": 2523,
+  "label_classes": [
+    "hardened",
+    "vulnerable"
+  ],
+  "numeric_features": [
+    "implicit_tls",
+    "starttls_used",
+    "tls_severity",
+    "is_deprecated_tls",
+    "cipher_strength",
+    "weak_cipher_flag",
+    "key_exchange_score",
+    "key_exchange_risk_num",
+    "authentication_risk_num",
+    "encryption_risk_num",
+    "no_forward_secrecy_flag",
+    "key_length_score",
+    "cert_sig_weak",
+    "cert_expiry_days",
+    "cert_expired",
+    "cert_expiring_soon",
+    "cert_self_signed",
+    "downgrade_attack_detected",
+    "mitm_indicators",
+    "missing_field_count"
+  ],
+  "categorical_features": [
+    "protocol"
+  ],
+  "feature_names_out": [
+    "num__implicit_tls",
+    "num__starttls_used",
+    "num__tls_severity",
+    "num__is_deprecated_tls",
+    "num__cipher_strength",
+    "num__weak_cipher_flag",
+    "num__key_exchange_score",
+    "num__key_exchange_risk_num",
+    "num__authentication_risk_num",
+    "num__encryption_risk_num",
+    "num__no_forward_secrecy_flag",
+    "num__key_length_score",
+    "num__cert_sig_weak",
+    "num__cert_expiry_days",
+    "num__cert_expired",
+    "num__cert_expiring_soon",
+    "num__cert_self_signed",
+    "num__downgrade_attack_detected",
+    "num__mitm_indicators",
+    "num__missing_field_count",
+    "cat__protocol_IMAP",
+    "cat__protocol_IMAPS",
+    "cat__protocol_POP3",
+    "cat__protocol_POP3S",
+    "cat__protocol_SMTP",
+    "cat__protocol_SMTPS"
+  ],
+  "notes": "Labels generated via rule-based weak supervision (no real analyst labels available yet). Replace data/synthetic_dataset.json + rule_based_risk_label with real labeled data when available and re-run this script; API/dashboard code needs no changes."
+}

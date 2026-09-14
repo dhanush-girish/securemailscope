@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SecureMailScope — Live Security Posture Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0b1020;
+    --panel: #131a2e;
+    --panel-border: #232c47;
+    --text: #e6e9f2;
+    --muted: #8891ab;
+    --hardened: #2ecc71;
+    --vulnerable: #e74c3c;
+    --accent: #4da3ff;
+    --accent-glow: rgba(77, 163, 255, 0.15);
+    --glass: rgba(19, 26, 46, 0.85);
+    --warning: #f1c40f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background:
+      radial-gradient(ellipse at 20% 0%, rgba(77, 163, 255, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, rgba(231, 76, 60, 0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(46, 204, 113, 0.04) 0%, transparent 60%);
+    z-index: 0;
+    pointer-events: none;
+    animation: bgShift 20s ease-in-out infinite alternate;
+  }
+  @keyframes bgShift {
+    0%   { opacity: 0.7; }
+    50%  { opacity: 1; }
+    100% { opacity: 0.7; }
+  }
+  body > * { position: relative; z-index: 1; }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .subtitle { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .controls { display: flex; gap: 10px; align-items: center; }
+  input[type=text] {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    width: 220px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  input[type=text]:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  button {
+    background: linear-gradient(135deg, var(--accent), #357abd);
+    border: none;
+    color: #fff;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    transition: transform 0.15s, box-shadow 0.2s;
+  }
+  button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(77, 163, 255, 0.3);
+  }
+  button:active { transform: translateY(0); }
+  .status-dot {
+    display: inline-block;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    margin-right: 6px;
+    background: var(--muted);
+    transition: background 0.3s;
+  }
+  .status-dot.online {
+    background: var(--hardened);
+    box-shadow: 0 0 8px rgba(46, 204, 113, 0.5);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .status-dot.offline { background: var(--vulnerable); }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 4px rgba(46, 204, 113, 0.3); }
+    50% { box-shadow: 0 0 12px rgba(46, 204, 113, 0.6); }
+  }
+
+  /* ── Summary Cards ── */
+  .summary-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .summary-card {
+    background: var(--glass);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .summary-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(77, 163, 255, 0.3);
+  }
+  .summary-card .num { font-size: 30px; font-weight: 800; letter-spacing: -0.5px; }
+  .summary-card .label {
+    color: var(--muted);
+    font-size: 11px; font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 4px;
+  }
+
+  /* ── Charts ── */
+  .charts-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 1100px) { .charts-section { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 700px)  { .charts-section { grid-template-columns: 1fr; } }
+  .chart-card {
+    background: var(--glass);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 20px;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .chart-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(77, 163, 255, 0.3);
+  }
+  .chart-title {
+    font-size: 13px; font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 14px;
+  }
+  .chart-container { position: relative; width: 100%; max-height: 260px; }
+
+  /* ── Table ── */
+  .table-wrap {
+    background: var(--glass);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th, td {
+    padding: 11px 14px;
+    text-align: left;
+    font-size: 13px;
+    border-bottom: 1px solid var(--panel-border);
+  }
+  th {
+    color: var(--muted); font-weight: 600;
+    text-transform: uppercase;
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .badge.hardened  { background: var(--hardened); color: #06101f; }
+  .badge.vulnerable { background: var(--vulnerable); color: #fff; }
+
+  .anomaly-flag { color: var(--vulnerable); font-weight: 700; font-size: 12px; }
+
+  .score-bar-wrap {
+    width: 90px; height: 6px;
+    background: #232c47;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .score-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+
+  .details-row td { background: #0e1428; font-size: 12.5px; color: var(--muted); }
+  .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; }
+  ul.mini-list { margin: 4px 0 0 0; padding-left: 18px; }
+  ul.mini-list li { margin-bottom: 3px; }
+  .toggle-row { cursor: pointer; color: var(--accent); font-size: 12px; transition: color 0.15s; }
+  .toggle-row:hover { color: #7bbfff; }
+  .empty-state { text-align: center; padding: 40px; color: var(--muted); font-size: 14px; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--panel);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 12px 18px;
+    color: var(--text); font-size: 13px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    z-index: 1000;
+    opacity: 0; transform: translateY(20px);
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  .error-banner {
+    background: rgba(231, 76, 60, 0.12);
+    border: 1px solid rgba(231, 76, 60, 0.3);
+    border-radius: 10px;
+    padding: 12px 18px;
+    color: #f5a5a0; font-size: 13px;
+    margin-bottom: 16px;
+    display: none;
+  }
+  .error-banner.visible { display: block; }
+
+  /* ── Last updated ticker ── */
+  .last-updated {
+    color: var(--muted);
+    font-size: 11px;
+    margin-left: 8px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🛡️ SecureMailScope — Live Security Posture</h1>
+    <div class="subtitle">
+      <span id="statusDot" class="status-dot"></span>
+      <span id="statusText">connecting…</span>
+      · <span id="pollLabel">polling every 10s</span>
+      <span id="lastUpdated" class="last-updated"></span>
+    </div>
+  </div>
+  <div class="controls">
+    <input id="apiBase" type="text" value="http://localhost:8000" title="FastAPI base URL" />
+    <button id="refreshBtn">⟳ Refresh now</button>
+  </div>
+</header>
+
+<div id="errorBanner" class="error-banner"></div>
+<div class="summary-row" id="summaryRow"></div>
+
+<!-- Charts -->
+<div class="charts-section">
+  <div class="chart-card">
+    <div class="chart-title">Risk Distribution</div>
+    <div class="chart-container"><canvas id="riskChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Security Score Trend</div>
+    <div class="chart-container"><canvas id="scoreChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Anomaly Detection Timeline</div>
+    <div class="chart-container"><canvas id="anomalyChart"></canvas></div>
+  </div>
+</div>
+
+<!-- Table -->
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>ID</th>
+        <th>Protocol</th>
+        <th>TLS</th>
+        <th>Risk</th>
+        <th>Anomaly</th>
+        <th>Security Score</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="tableBody">
+      <tr><td colspan="8" class="empty-state">Waiting for analysis results…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<!-- Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// CONFIG
+// ─────────────────────────────────────────────────────────────────────────────
+const POLL_MS        = 10000;  // refresh every 10 seconds
+const RESULT_LIMIT   = 100;    // max rows to fetch
+let lastResults      = [];
+let pollingInterval  = null;
+let realtimeChannel  = null;
+let dataSource       = 'none'; // 'api', 'supabase', 'none'
+
+// ── Supabase ──
+const SUPABASE_URL = 'https://uvetjkjaqirvqaawcwos.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_olUQvB9m34q8GAAJfGluqA_bwrH1t0J';
+
+// FIX: renamed to supabaseClient to avoid shadowing window.supabase
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+console.log('[SMS] Supabase client initialized for', SUPABASE_URL);
+
+// ── Chart instances ──
+let riskChartInstance    = null;
+let scoreChartInstance   = null;
+let anomalyChartInstance = null;
+
+// ── Risk level colors (actual model labels) ──
+const RISK_COLORS = {
+  hardened:    '#2ecc71',
+  vulnerable:  '#e74c3c',
+  // Fallbacks if model ever produces other labels
+  Low:         '#2ecc71',
+  Medium:      '#f1c40f',
+  High:        '#e67e22',
+  Critical:    '#e74c3c',
+};
+
+function getRiskColor(label) {
+  return RISK_COLORS[label] || '#8891ab';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+function apiBase() {
+  return document.getElementById('apiBase').value.replace(/\/$/, '');
+}
+
+function scoreColorHex(score) {
+  if (score >= 75) return '#2ecc71';
+  if (score >= 50) return '#f1c40f';
+  if (score >= 25) return '#e67e22';
+  return '#e74c3c';
+}
+
+function scoreColorVar(score) {
+  if (score >= 75) return 'var(--hardened)';
+  if (score >= 50) return 'var(--warning)';
+  if (score >= 25) return '#e67e22';
+  return 'var(--vulnerable)';
+}
+
+// is_anomaly may be boolean OR integer (0/1) after column alter
+function isAnomaly(val) {
+  return val === true || val === 1 || val === '1';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+function showError(msg) {
+  const el = document.getElementById('errorBanner');
+  el.textContent = '⚠ ' + msg;
+  el.classList.add('visible');
+}
+function clearError() {
+  document.getElementById('errorBanner').classList.remove('visible');
+}
+function updateTimestamp() {
+  document.getElementById('lastUpdated').textContent =
+    '· last update: ' + new Date().toLocaleTimeString();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RENDER — Summary Cards
+// ─────────────────────────────────────────────────────────────────────────────
+function renderSummary(results) {
+  const processed = results.filter(r => r.risk_level);
+  const total = processed.length;
+
+  // Dynamic risk counts — works with any label set
+  const riskCounts = {};
+  let anomalies = 0;
+  let scoreSum  = 0;
+
+  processed.forEach(r => {
+    const rl = r.risk_level;
+    riskCounts[rl] = (riskCounts[rl] || 0) + 1;
+    if (isAnomaly(r.is_anomaly)) anomalies++;
+    scoreSum += (r.security_score || 0);
+  });
+  const avgScore = total ? Math.round(scoreSum / total) : 0;
+
+  const cards = [
+    { label: 'Sessions Analyzed',  value: total,                       color: '#4da3ff' },
+    { label: 'Avg Security Score', value: avgScore,                    color: scoreColorHex(avgScore) },
+    { label: '🟢 Hardened',        value: riskCounts['hardened']  || 0, color: '#2ecc71' },
+    { label: '🔴 Vulnerable',      value: riskCounts['vulnerable'] || 0,color: '#e74c3c' },
+    { label: '⚠ Anomalies',        value: anomalies,                   color: '#e74c3c' },
+  ];
+
+  document.getElementById('summaryRow').innerHTML = cards.map(c => `
+    <div class="summary-card">
+      <div class="num" style="color:${c.color}">${c.value}</div>
+      <div class="label">${c.label}</div>
+    </div>
+  `).join('');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RENDER — Charts
+// ─────────────────────────────────────────────────────────────────────────────
+function renderCharts(results) {
+  const processed = results.filter(r => r.risk_level);
+  if (!processed.length) return;
+
+  // ── 1. RISK DISTRIBUTION (Doughnut) ──
+  const riskCounts = {};
+  processed.forEach(r => {
+    riskCounts[r.risk_level] = (riskCounts[r.risk_level] || 0) + 1;
+  });
+  const riskLabels  = Object.keys(riskCounts);
+  const riskData    = Object.values(riskCounts);
+  const riskColors  = riskLabels.map(l => getRiskColor(l));
+
+  const riskCtx = document.getElementById('riskChart').getContext('2d');
+  if (riskChartInstance) riskChartInstance.destroy();
+  riskChartInstance = new Chart(riskCtx, {
+    type: 'doughnut',
+    data: {
+      labels: riskLabels.map(l => l.charAt(0).toUpperCase() + l.slice(1)),
+      datasets: [{
+        data: riskData,
+        backgroundColor: riskColors,
+        borderColor: '#131a2e',
+        borderWidth: 3,
+        hoverOffset: 8,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      cutout: '65%',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: '#8891ab', font: { family: 'Inter', size: 11 }, padding: 16, usePointStyle: true, pointStyleWidth: 8 },
+        },
+        tooltip: {
+          backgroundColor: '#1a2240', titleColor: '#e6e9f2', bodyColor: '#8891ab',
+          borderColor: '#232c47', borderWidth: 1, cornerRadius: 8, padding: 10,
+          callbacks: {
+            label: ctx => ` ${ctx.label}: ${ctx.parsed} (${Math.round(ctx.parsed / processed.length * 100)}%)`
+          }
+        },
+      },
+      animation: { animateRotate: true, duration: 600, easing: 'easeOutQuart' },
+    },
+  });
+
+  // ── 2. SECURITY SCORE TREND (Line) ──
+  const sorted = [...processed]
+    .filter(r => r.analyzed_at || r.captured_at)
+    .sort((a, b) => new Date(a.analyzed_at || a.captured_at) - new Date(b.analyzed_at || b.captured_at));
+
+  const scoreLabels = sorted.map(r => {
+    const d = new Date(r.analyzed_at || r.captured_at);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  });
+  const scoreData   = sorted.map(r => r.security_score || 0);
+  const pointColors = sorted.map(r => scoreColorHex(r.security_score || 0));
+
+  const scoreCtx = document.getElementById('scoreChart').getContext('2d');
+  if (scoreChartInstance) scoreChartInstance.destroy();
+
+  const gradient = scoreCtx.createLinearGradient(0, 0, 0, 260);
+  gradient.addColorStop(0, 'rgba(77, 163, 255, 0.25)');
+  gradient.addColorStop(1, 'rgba(77, 163, 255, 0.0)');
+
+  scoreChartInstance = new Chart(scoreCtx, {
+    type: 'line',
+    data: {
+      labels: scoreLabels,
+      datasets: [{
+        label: 'Security Score',
+        data: scoreData,
+        borderColor: '#4da3ff',
+        backgroundColor: gradient,
+        fill: true,
+        tension: 0.35,
+        borderWidth: 2.5,
+        pointRadius: sorted.length > 30 ? 0 : 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: pointColors,
+        pointBorderColor: '#131a2e',
+        pointBorderWidth: 2,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      scales: {
+        x: { ticks: { color: '#8891ab', font: { family: 'Inter', size: 10 }, maxRotation: 45, maxTicksLimit: 8 }, grid: { color: 'rgba(35,44,71,0.5)' } },
+        y: { min: 0, max: 100, ticks: { color: '#8891ab', font: { family: 'Inter', size: 10 }, stepSize: 25 }, grid: { color: 'rgba(35,44,71,0.5)' } },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: '#1a2240', titleColor: '#e6e9f2', bodyColor: '#8891ab', borderColor: '#232c47', borderWidth: 1, cornerRadius: 8, callbacks: { label: ctx => `Score: ${ctx.parsed.y}/100` } },
+      },
+      animation: { duration: 400, easing: 'easeOutQuart' },
+    },
+  });
+
+  // ── 3. ANOMALY TIMELINE (Bar) ──
+  const timeMap = new Map();
+  sorted.forEach(r => {
+    const d = new Date(r.analyzed_at || r.captured_at);
+    const key = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (!timeMap.has(key)) timeMap.set(key, { normal: 0, anomaly: 0 });
+    const bucket = timeMap.get(key);
+    if (isAnomaly(r.is_anomaly)) bucket.anomaly++;
+    else bucket.normal++;
+  });
+
+  const anomalyLabels = [...timeMap.keys()];
+  const normalData    = anomalyLabels.map(k => timeMap.get(k).normal);
+  const anomalyData   = anomalyLabels.map(k => timeMap.get(k).anomaly);
+
+  const anomalyCtx = document.getElementById('anomalyChart').getContext('2d');
+  if (anomalyChartInstance) anomalyChartInstance.destroy();
+  anomalyChartInstance = new Chart(anomalyCtx, {
+    type: 'bar',
+    data: {
+      labels: anomalyLabels,
+      datasets: [
+        { label: 'Normal',  data: normalData,  backgroundColor: 'rgba(46,204,113,0.7)',  borderColor: '#2ecc71', borderWidth: 1, borderRadius: 4 },
+        { label: 'Anomaly', data: anomalyData, backgroundColor: 'rgba(231,76,60,0.7)',  borderColor: '#e74c3c', borderWidth: 1, borderRadius: 4 },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      scales: {
+        x: { stacked: true, ticks: { color: '#8891ab', font: { family: 'Inter', size: 10 }, maxRotation: 45, maxTicksLimit: 8 }, grid: { display: false } },
+        y: { stacked: true, beginAtZero: true, ticks: { color: '#8891ab', font: { family: 'Inter', size: 10 }, stepSize: 1 }, grid: { color: 'rgba(35,44,71,0.5)' } },
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#8891ab', font: { family: 'Inter', size: 11 }, padding: 16, usePointStyle: true, pointStyleWidth: 8 } },
+        tooltip: { backgroundColor: '#1a2240', titleColor: '#e6e9f2', bodyColor: '#8891ab', borderColor: '#232c47', borderWidth: 1, cornerRadius: 8 },
+      },
+      animation: { duration: 400, easing: 'easeOutQuart' },
+    },
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RENDER — Table
+// ─────────────────────────────────────────────────────────────────────────────
+function renderTable(results) {
+  const tbody     = document.getElementById('tableBody');
+
+  if (!results.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No analysis results yet. Waiting for data…</td></tr>';
+    return;
+  }
+
+  // Sort by id desc (newest first) to ensure unanalyzed data is at the top
+  const sorted = [...results].sort((a, b) => b.id - a.id);
+
+  tbody.innerHTML = sorted.map((r, i) => {
+    const time   = (r.analyzed_at || r.captured_at) ? new Date(r.analyzed_at || r.captured_at).toLocaleTimeString() : '—';
+    const isPending = !r.risk_level;
+    const riskBadge = isPending 
+      ? '<span class="badge" style="background:var(--muted);color:#06101f;">Pending</span>' 
+      : `<span class="badge ${r.risk_level}">${r.risk_level}</span>`;
+    
+    const sClr   = scoreColorVar(r.security_score || 0);
+    const anomaly = isAnomaly(r.is_anomaly);
+    const weaknesses      = Array.isArray(r.detected_weaknesses) ? r.detected_weaknesses : [];
+    const recommendations = Array.isArray(r.recommendations)     ? r.recommendations     : [];
+
+    return `
+      <tr ${isPending ? 'style="opacity: 0.7;"' : ''}>
+        <td>${time}</td>
+        <td>${r.id || (r.session_id || '—').toString().slice(0, 8)}</td>
+        <td>${r.protocol || '—'}</td>
+        <td>${r.tls_version || r.negotiated_version || 'unknown'}</td>
+        <td>${riskBadge}</td>
+        <td>${!isPending && anomaly ? '<span class="anomaly-flag">⚠ anomaly</span>' : '—'}</td>
+        <td>
+          ${isPending ? '<span style="font-size:11px;color:var(--muted)">Analyzing…</span>' : `
+          <div class="score-bar-wrap">
+            <div class="score-bar-fill" style="width:${r.security_score || 0}%; background:${sClr};"></div>
+          </div>
+          <span style="font-size:11px;color:var(--muted)">${r.security_score || 0}/100</span>
+          `}
+        </td>
+        <td><span class="toggle-row" onclick="toggleDetails(${i})">details ▾</span></td>
+      </tr>
+      <tr id="details-${i}" class="details-row" style="display:none;">
+        <td colspan="8">
+          <div class="details-grid">
+            <div>
+              <strong>Detected weaknesses</strong>
+              <ul class="mini-list">
+                ${isPending ? '<li>Analysis in progress...</li>' : (weaknesses.length ? weaknesses : ['None detected']).map(w => `<li>${w}</li>`).join('')}
+              </ul>
+            </div>
+            <div>
+              <strong>Recommendations</strong>
+              <ul class="mini-list">
+                ${isPending ? '<li>Analysis in progress...</li>' : (recommendations.length ? recommendations : ['No recommendations']).map(w => `<li>${w}</li>`).join('')}
+              </ul>
+            </div>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function toggleDetails(i) {
+  const row = document.getElementById('details-' + i);
+  row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RENDER ALL
+// ─────────────────────────────────────────────────────────────────────────────
+function renderAll(results) {
+  renderSummary(results);
+  renderCharts(results);
+  renderTable(results);
+  updateTimestamp();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DATA LOADING — always refreshes from Supabase directly (primary) or API
+// ─────────────────────────────────────────────────────────────────────────────
+async function fetchFromSupabase() {
+  const { data, error } = await supabaseClient
+    .from('analysis_results')
+    .select('*')
+    .order('id', { ascending: false })
+    .limit(RESULT_LIMIT);
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+async function fetchFromAPI() {
+  const res = await fetch(apiBase() + '/history?limit=' + RESULT_LIMIT);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const json = await res.json();
+  return json.results || [];
+}
+
+async function loadData() {
+  const dot        = document.getElementById('statusDot');
+  const statusText = document.getElementById('statusText');
+
+  // ── Strategy 1: Query Supabase directly (fastest, no FastAPI dependency) ──
+  try {
+    const rows = await fetchFromSupabase();
+    if (rows.length > 0 || dataSource !== 'api') {
+      lastResults = rows;
+      renderAll(lastResults);
+      dot.className = 'status-dot online';
+      statusText.textContent = 'live — Supabase direct (' + lastResults.length + ' rows)';
+      dataSource = 'supabase';
+      clearError();
+      return;
+    }
+  } catch (e) {
+    console.warn('[SMS] Supabase direct query failed:', e.message);
+  }
+
+  // ── Strategy 2: FastAPI backend fallback ──
+  try {
+    lastResults = await fetchFromAPI();
+    renderAll(lastResults);
+    dot.className = 'status-dot online';
+    statusText.textContent = 'live — via API (' + lastResults.length + ' rows)';
+    dataSource = 'api';
+    clearError();
+    return;
+  } catch (e) {
+    console.warn('[SMS] API also failed:', e.message);
+  }
+
+  // ── Both failed ──
+  dot.className = 'status-dot offline';
+  statusText.textContent = 'disconnected';
+  dataSource = 'none';
+  showError('Cannot reach Supabase or API (' + apiBase() + '). Check your network and console.');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUPABASE REALTIME — instant updates via WebSocket
+// ─────────────────────────────────────────────────────────────────────────────
+function setupRealtime() {
+  if (realtimeChannel) {
+    supabaseClient.removeChannel(realtimeChannel);
+  }
+
+  realtimeChannel = supabaseClient.channel('dashboard-live')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'analysis_results' },
+      (payload) => {
+        console.log('[SMS] Realtime:', payload.eventType, payload);
+
+        if (payload.eventType === 'DELETE') {
+          lastResults = lastResults.filter(r => r.id !== payload.old.id);
+          showToast('🗑️ Record deleted');
+        } else {
+          const rec = payload.new;
+          if (rec) {
+            const idx = lastResults.findIndex(r => r.id === rec.id);
+            if (idx > -1) {
+              lastResults[idx] = rec;
+              showToast('🔄 Updated row ' + rec.id + (rec.risk_level ? ' → ' + rec.risk_level : ''));
+            } else {
+              lastResults.unshift(rec);
+              if (lastResults.length > RESULT_LIMIT) lastResults.pop();
+              showToast('🆕 New row ' + rec.id + (rec.risk_level ? ' → ' + rec.risk_level : ' (awaiting ML)'));
+            }
+          }
+        }
+        renderAll(lastResults);
+      }
+    )
+    .subscribe((status, err) => {
+      console.log('[SMS] Realtime status:', status, err || '');
+      if (status === 'SUBSCRIBED') {
+        document.getElementById('pollLabel').textContent = 'realtime + polling every 10s';
+        showToast('⚡ Realtime connected');
+      }
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BOOT — load + poll every 3s + realtime
+// ─────────────────────────────────────────────────────────────────────────────
+document.getElementById('refreshBtn').addEventListener('click', () => {
+  showToast('🔄 Refreshing…');
+  loadData();
+});
+document.getElementById('apiBase').addEventListener('change', loadData);
+
+// Initial load
+loadData().then(() => {
+  setupRealtime();
+});
+
+// ALWAYS poll every 3 seconds for guaranteed freshness
+pollingInterval = setInterval(loadData, POLL_MS);
+</script>
+
+</body>
+</html>

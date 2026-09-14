@@ -1,0 +1,20 @@
+{
+  "sessions": [
+    {
+      "src_port": 25, "dst_port": 51000,
+      "negotiated_version": "TLS1.0", "negotiated_cipher": "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
+      "cert_days_to_expiry": 100, "cert_sig_algorithm": "sha1",
+      "flag_deprecated_version": true, "flag_weak_cipher": true,
+      "flag_no_forward_secrecy": true, "flag_weak_cert_signature": true,
+      "flag_cert_expiring_soon": false
+    },
+    {
+      "src_port": 995, "dst_port": 51500,
+      "negotiated_version": "TLS1.2", "negotiated_cipher": "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+      "cert_days_to_expiry": 5, "cert_sig_algorithm": "sha256",
+      "flag_deprecated_version": false, "flag_weak_cipher": false,
+      "flag_no_forward_secrecy": false, "flag_weak_cert_signature": false,
+      "flag_cert_expiring_soon": true
+    }
+  ]
+}

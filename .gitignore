@@ -1,0 +1,19 @@
+# Environment / secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# Models (large binary files)
+pipeline/saved_models/*.pkl
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

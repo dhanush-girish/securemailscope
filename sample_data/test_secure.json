@@ -1,0 +1,20 @@
+{
+  "captured_at": "2026-09-13T10:05:00+00:00",
+  "src_ip": "10.10.10.5",
+  "dst_ip": "10.10.10.99",
+  "src_port": 993,
+  "dst_port": 52000,
+  "negotiated_version": "TLS1.3",
+  "negotiated_cipher": "TLS_AES_256_GCM_SHA384",
+  "cert_subject": "CN=mail.testcorp.local,O=TestCorp",
+  "cert_issuer": "DigiCert",
+  "cert_expiry": "2027-06-01T00:00:00+00:00",
+  "cert_days_to_expiry": 260,
+  "cert_sig_algorithm": "sha256",
+  "flag_deprecated_version": false,
+  "flag_weak_cipher": false,
+  "flag_no_forward_secrecy": false,
+  "flag_weak_cert_signature": false,
+  "flag_cert_expiring_soon": false,
+  "label": "secure"
+}

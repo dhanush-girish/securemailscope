@@ -1,0 +1,20 @@
+{
+  "captured_at": "2026-09-13T10:00:00+00:00",
+  "src_ip": "10.10.10.5",
+  "dst_ip": "10.10.10.99",
+  "src_port": 25,
+  "dst_port": 51000,
+  "negotiated_version": "SSLv3",
+  "negotiated_cipher": "TLS_RSA_WITH_RC4_128_SHA",
+  "cert_subject": "CN=mail.testcorp.local,O=TestCorp",
+  "cert_issuer": "Self-Signed-CA",
+  "cert_expiry": "2026-09-20T00:00:00+00:00",
+  "cert_days_to_expiry": -5,
+  "cert_sig_algorithm": "md5",
+  "flag_deprecated_version": true,
+  "flag_weak_cipher": true,
+  "flag_no_forward_secrecy": true,
+  "flag_weak_cert_signature": true,
+  "flag_cert_expiring_soon": false,
+  "label": "vulnerable"
+}
