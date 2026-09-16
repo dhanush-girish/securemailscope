@@ -1,0 +1,6 @@
+*.pcap
+*.db
+*.log
+*.pid
+__pycache__/
+captures/
